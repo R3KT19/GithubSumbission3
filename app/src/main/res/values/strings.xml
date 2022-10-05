@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">GtihubUserDicoding</string>
+    <string name="images_user">Foto pengguna</string>
+    <string name="username">Username</string>
+    <string name="real_name">Real Name</string>
+    <string name="tab_following">Following</string>
+    <string name="tab_followers">Followers</string>
+    <string name="lokasi">Lokasi</string>
+    <string name="total_repo">Repositories</string>
+    <string name="total_following">Following</string>
+    <string name="total_followers">Followers</string>
+    <string name="company_name">Nama Company</string>
+    <string name="dummy">dummy</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="location">Location :</string>
+    <string name="company">Company :</string>
+    <string name="users">Users</string>
+    <string name="bookmarked">Bookmarked Users</string>
+    <string name="like">Like</string>
+    <string name="theme">Switch Theme</string>
+    <string name="change_theme">Ganti Tema</string>
+</resources>
