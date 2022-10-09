@@ -22,13 +22,18 @@ class UsersViewModel (private val usersRepository: UsersRepository) : ViewModel(
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading : LiveData<Boolean> = _isLoading
 
+    private val _list = MutableLiveData<Result<List<UsersEntity>>>()
+    val list : LiveData<Result<List<UsersEntity>>> = _list
+
     fun getUsers() = usersRepository.getUsers()
 
     fun getBookmarkedUsers() = usersRepository.getBookmarkedUsers()
 
     fun getSearchUsers(username : String) = usersRepository.getSearchUser(username)
 
+
     fun getDetailUsers(username: String) {
+
         _isLoading.value = true
         val client = ApiConfig.getApiService().userDetail(username)
         client.enqueue(object : Callback<UserDetailResponse> {
@@ -102,21 +107,15 @@ class UsersViewModel (private val usersRepository: UsersRepository) : ViewModel(
     }
 
     fun saveUsers(users : UsersEntity) {
-        viewModelScope.launch {
-            usersRepository.setUsersBookmark(users, true)
-        }
+        usersRepository.setUsersBookmark(users, true)
     }
 
     fun deleteUsers(users: UsersEntity){
-        viewModelScope.launch {
-            usersRepository.setUsersBookmark(users, false)
-        }
+        usersRepository.setUsersBookmark(users, false)
     }
 
     fun getDetailUsersEntity(username: String) : UsersEntity {
-        return runBlocking {
-            usersRepository.getDetailUsers(username)
-        }
+        return usersRepository.getDetailUsers(username)
     }
 
     companion object{

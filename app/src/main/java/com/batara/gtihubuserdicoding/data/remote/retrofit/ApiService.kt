@@ -13,13 +13,13 @@ import retrofit2.http.Query
 interface ApiService {
     @GET("/users")
     @Headers("Authorization: token ${BuildConfig.API_KEY}")
-    suspend fun retrieveUser(): List<UsersResponseItem>
+    fun retrieveUser(): Call<List<UsersResponseItem>>
 
     @GET("/search/users")
     @Headers("Authorization: token ${BuildConfig.API_KEY}")
-    suspend fun searchUser(
+    fun searchUser(
         @Query("q") username: String
-    ): UserSearchResponse
+    ): Call<UserSearchResponse>
 
     @GET("/users/{username}")
     @Headers("Authorization: token ${BuildConfig.API_KEY}")

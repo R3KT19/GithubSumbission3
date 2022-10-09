@@ -13,23 +13,23 @@ interface UsersDao {
     fun getBookmarkedUsers(): LiveData<List<UsersEntity>>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertUsers(users: List<UsersEntity>)
+    fun insertUsers(users: List<UsersEntity>)
 
     @Update
-    suspend fun updateUsers(users: UsersEntity)
+    fun updateUsers(users: UsersEntity)
 
     @Query("DELETE FROM users WHERE isBookmarked = 0")
-    suspend fun deleteAll()
+    fun deleteAll()
 
     @Query("SELECT EXISTS(SELECT * FROM users WHERE username = :username AND isBookmarked = 1)")
-    suspend fun isUsersBookmarked(username: String): Boolean
+    fun isUsersBookmarked(username: String): Boolean
 
     @Query("SELECT * FROM users WHERE username = :username ")
-    suspend fun getDetailUser(username: String): UsersEntity
+    fun getDetailUser(username: String): UsersEntity
 
     @Query("SELECT * FROM users WHERE username = :username ")
-    suspend fun getDetailUserSearch(username: String): UsersEntity
+    fun getDetailUserSearch(username: String): UsersEntity
 
-    @Query("SELECT * FROM users WHERE username LIKE '' || :username  || '%' ORDER BY id ASC")
+    @Query("SELECT * FROM users WHERE username LIKE '%' || :username  || '%' ORDER BY id ASC")
     fun searchUser(username: String?): LiveData<List<UsersEntity>>
 }

@@ -1,42 +1,64 @@
 package com.batara.gtihubuserdicoding.data.repository
 
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.liveData
-import androidx.lifecycle.map
+import androidx.lifecycle.*
+import com.batara.gtihubuserdicoding.UserSearchResponse
+import com.batara.gtihubuserdicoding.UsersResponseItem
 import com.batara.gtihubuserdicoding.data.local.entity.UsersEntity
 import com.batara.gtihubuserdicoding.data.local.room.UsersDao
 import com.batara.gtihubuserdicoding.data.remote.retrofit.ApiService
+import com.batara.gtihubuserdicoding.utlis.AppExecutors
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+
 
 class UsersRepository private constructor(
     private val apiService : ApiService,
     private val usersDao : UsersDao,
+    private val appExecutors: AppExecutors
 ) {
-    fun getUsers() : LiveData<Result<List<UsersEntity>>> = liveData {
-        emit(Result.Loading)
-        try {
-            val response = apiService.retrieveUser()
-            val listUsers = response.map { users ->
-                val isBookmarked = usersDao.isUsersBookmarked(users.login)
-                UsersEntity(
-                    users.login,
-                    users.id,
-                    users.avatarUrl,
-                    isBookmarked
-                )
+    private val result = MediatorLiveData<Result<List<UsersEntity>>>()
+
+    fun getUsers() : LiveData<Result<List<UsersEntity>>> {
+        result.value = Result.Loading
+        val client = apiService.retrieveUser()
+        client.enqueue(object : Callback<List<UsersResponseItem>> {
+            override fun onResponse(
+                call: Call<List<UsersResponseItem>>,
+                response: Response<List<UsersResponseItem>>
+            ) {
+                if (response.isSuccessful) {
+                    val users = response.body()
+                    val usersList = ArrayList<UsersEntity>()
+                    appExecutors.diskIO.execute {
+                        users?.forEach { users ->
+                            val isBookmarked = usersDao.isUsersBookmarked(users.login)
+                            val user = UsersEntity(
+                                users.login,
+                                users.id,
+                                users.avatarUrl,
+                                isBookmarked
+                            )
+                            usersList.add(user)
+                        }
+                        usersDao.deleteAll()
+                        usersDao.insertUsers(usersList)
+                    }
+                }
             }
-            usersDao.deleteAll()
-            usersDao.insertUsers(listUsers)
-            Log.d(TAG, "getUsers: test")
-        }catch (e : Exception) {
-            Log.d("UsersRepository", "getUsers: ${e.message.toString()}")
+
+            override fun onFailure(call: Call<List<UsersResponseItem>>, t: Throwable) {
+                result.value = Result.Error(t.message.toString())
+            }
+        })
+
+        val localData = usersDao.getUsers()
+        result.addSource(localData) { newData: List<UsersEntity> ->
+            result.value = Result.Success(newData)
         }
-        val localData: LiveData<Result<List<UsersEntity>>> = usersDao.getUsers().map {
-            Result.Success(
-                it
-            )
-        }
-        emitSource(localData)
+
+        return result
     }
 
 
@@ -44,52 +66,66 @@ class UsersRepository private constructor(
         return usersDao.getBookmarkedUsers()
     }
 
-    fun getSearchUser(username: String) : LiveData<Result<List<UsersEntity>>> = liveData {
-        emit(Result.Loading)
-        try {
-            val response = apiService.searchUser(username)
-            val dataSearchUsers = response.items
-            val listSearchUsers = dataSearchUsers.map { search ->
-                val isBookmarked = usersDao.isUsersBookmarked(search.login)
-                UsersEntity(
-                    search.login,
-                    search.id,
-                    search.avatarUrl,
-                    isBookmarked
-                )
+    fun getSearchUser(username: String) : LiveData<Result<List<UsersEntity>>> {
+        result.value = Result.Loading
+        val client = apiService.searchUser(username)
+        client.enqueue(object : Callback<UserSearchResponse> {
+            override fun onResponse(
+                call: Call<UserSearchResponse>,
+                response: Response<UserSearchResponse>
+            ) {
+                if (response.isSuccessful) {
+                    val users = response.body()?.items
+                    val usersList = ArrayList<UsersEntity>()
+                    appExecutors.diskIO.execute {
+                        users?.forEach { users ->
+                            val isBookmarked = usersDao.isUsersBookmarked(users.login)
+                            val user = UsersEntity(
+                                users.login,
+                                users.id,
+                                users.avatarUrl,
+                                isBookmarked
+                            )
+                            usersList.add(user)
+                        }
+                        usersDao.deleteAll()
+                        usersDao.insertUsers(usersList)
+                    }
+                }
             }
-            usersDao.deleteAll()
-            usersDao.insertUsers(listSearchUsers)
-        }catch (e : Exception) {
-            Log.d(TAG, "getUsers: ${e.message.toString()}")
+
+            override fun onFailure(call: Call<UserSearchResponse>, t: Throwable) {
+                result.value = Result.Error(t.message.toString())
+            }
+        })
+
+        val localData = usersDao.searchUser(username)
+        result.addSource(localData) { newData: List<UsersEntity> ->
+            result.value = Result.Success(newData)
         }
-        val localData: LiveData<Result<List<UsersEntity>>> = usersDao.searchUser(username).map {
-            Result.Success(
-                it
-            )
-        }
-        emitSource(localData)
+        return result
     }
 
 
-    suspend fun setUsersBookmark(users: UsersEntity, bookmarkState: Boolean) {
+    fun setUsersBookmark(users: UsersEntity, bookmarkState: Boolean) {
         users.isBookmarked = bookmarkState
         usersDao.updateUsers(users)
     }
 
-    suspend fun getDetailUsers(username: String) : UsersEntity {
+    fun getDetailUsers(username: String) : UsersEntity {
         return usersDao.getDetailUser(username)
     }
 
-    companion object{
+    companion object {
         @Volatile
         private var instance: UsersRepository? = null
         fun getInstance(
             apiService: ApiService,
-            usersDao: UsersDao,
-        ) : UsersRepository =
+            newsDao: UsersDao,
+            appExecutors: AppExecutors
+        ): UsersRepository =
             instance ?: synchronized(this) {
-                instance ?: UsersRepository(apiService, usersDao)
+                instance ?: UsersRepository(apiService, newsDao, appExecutors)
             }.also { instance = it }
 
         private const val TAG = "UsersRepository"
